@@ -42,5 +42,5 @@ export default function BoardModel({
     return boardArray
   }, [game, selectedSquare, validMoves, toSymbol])
 
-  return children(squares)
+  return <>{children(squares)}</>
 }

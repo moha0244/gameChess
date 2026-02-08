@@ -68,8 +68,8 @@ export default function StatusModal({
   // ====== VARIANTE 1 : TOAST (ÉCHEC) ======
   if (content.variant === "toast") {
     return (
-      <div className="fixed bottom-10 left-1/2 z-[9999] -translate-x-1/2 min-w-[200px]">
-        <div className="flex items-center gap-3 rounded-xl border-2 border-orange-500 bg-[#161d26] px-5 py-3 shadow-[0_0_20px_rgba(245,124,0,0.4)] animate-bounce">
+      <div className="fixed bottom-10 left-1/2 z-[9999] min-w-[200px] -translate-x-1/2">
+        <div className="flex animate-bounce items-center gap-3 rounded-xl border-2 border-orange-500 bg-[#161d26] px-5 py-3 shadow-[0_0_20px_rgba(245,124,0,0.4)]">
           <AlertTriangle className="text-orange-400" size={20} />
           <span className="text-lg font-bold text-white">
             {content.message}

@@ -39,14 +39,18 @@ const isGameOver = (g) =>
 export default function ChessGame({ playerColor, difficulty, children }) {
   const [game, setGame] = useState(() => new Chess())
   const gameRef = useRef(game)
-  const aiTimeoutRef = useRef(null)
+  const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [selectedSquare, setSelectedSquare] = useState(null)
-  const [validMoves, setValidMoves] = useState([])
-
-  const [statusModal, setStatusModal] = useState({
+  const [validMoves, setValidMoves] = useState<string[]>([])
+  const [statusModal, setStatusModal] = useState<{
+    open: boolean
+    type: "check" | "checkmate" | "draw"
+    sideInCheck: "w" | "b" | null
+    winner: "w" | "b" | null
+  }>({
     open: false,
-    type: "check", // "check" | "checkmate" | "draw"
+    type: "check",
     sideInCheck: null,
     winner: null,
   })
