@@ -12,7 +12,7 @@ export const env = createEnv({
     // GITHUB_ACCESS_TOKEN: z.string().min(1),
   },
   client: {
-    NEXT_PUBLIC_APP_URL: z.string().min(1),
+    // NEXT_PUBLIC_APP_URL: z.string().min(1),
   },
   runtimeEnv: {
     // NEXTAUTH_URL: process.env.NEXTAUTH_URL,
@@ -20,7 +20,6 @@ export const env = createEnv({
     // GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
     // GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
     // GITHUB_ACCESS_TOKEN: process.env.GITHUB_ACCESS_TOKEN,
-
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    // NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
 })
