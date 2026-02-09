@@ -5,7 +5,7 @@ export default function Showcase() {
 
       <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#1c242e] shadow-2xl transition-all duration-500 hover:scale-[1.05] lg:scale-110">
         <img
-          src="/chess-picture.png"
+          src="/chess-picture.PNG"
           alt="Échiquier de jeu"
           className="h-auto min-h-[450px] w-full object-cover"
         />
