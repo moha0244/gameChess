@@ -12,7 +12,6 @@ export interface SquareClickPayload {
   pieceColor: PlayerColor | null
 }
 
-/** Données UI d'une case  */
 export interface SquareUI {
   row: number
   col: number
