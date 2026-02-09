@@ -12,7 +12,7 @@ export default function Showcase() {
 
         <div className="absolute bottom-6 left-6 flex items-center gap-3 rounded-full border border-white/5 bg-black/60 px-4 py-2 text-sm font-medium backdrop-blur-md">
           <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-orange-500 shadow-[0_0_10px_#22c55e]" />
-          <span className="text-gray-200">IA en ligne — Prête à jouer</span>
+          <span className="text-gray-200">Prêt pour une partie ?</span>
         </div>
       </div>
     </div>
