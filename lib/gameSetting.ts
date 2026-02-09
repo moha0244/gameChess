@@ -19,15 +19,21 @@ export function loadSettings(): GameSettings | null {
   if (!raw) return null
 
   try {
-    const parsed = JSON.parse(raw) as Partial<GameSettings>
-    const difficultyOk =
-      parsed.difficulty === "Facile" ||
-      parsed.difficulty === "Moyen" ||
-      parsed.difficulty === "Difficile"
-    const colorOk = parsed.color === "Blancs" || parsed.color === "Noirs"
+    const parsed = JSON.parse(raw)
 
-    if (!difficultyOk || !colorOk) return null
-    return { difficulty: parsed.difficulty, color: parsed.color }
+    const difficulty = parsed.difficulty as Difficulty
+    const color = parsed.color as PieceColorChoice
+
+    const isDifficultyValid = ["Facile", "Moyen", "Difficile"].includes(
+      difficulty
+    )
+    const isColorValid = ["Blancs", "Noirs"].includes(color)
+
+    if (isDifficultyValid && isColorValid) {
+      return { difficulty, color }
+    }
+
+    return null
   } catch {
     return null
   }
