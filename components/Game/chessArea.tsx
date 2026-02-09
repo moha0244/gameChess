@@ -49,14 +49,14 @@ export default function ChessArea({ playerColor, difficulty }) {
           <StatusModal
             open={statusModal.open}
             type={statusModal.type}
+            title={statusModal.title}
             sideInCheck={statusModal.sideInCheck}
             winner={statusModal.winner}
             onClose={closeModal}
             onRestart={resetGame}
           />
 
-          <div className="group mx-auto flex w-full max-w-[600px] flex-col"></div>
-          <div className="group mx-auto flex w-full max-w-[700px] flex-col">
+          <div className="group mx-auto flex w-full  flex-col">
             {/* Profil du haut */}
             <ProfileCard
               icon={topProfile.icon}
@@ -68,7 +68,7 @@ export default function ChessArea({ playerColor, difficulty }) {
             />
 
             {/* Échiquier */}
-            <div className="relative border-x border-gray-800/50 bg-gray-900 p-4">
+            <div className="relative border-x border-gray-800/50 bg-gray-900 p-6">
               <BoardModel
                 game={game}
                 selectedSquare={selectedSquare}

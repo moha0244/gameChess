@@ -7,6 +7,7 @@ import { AlertTriangle } from "lucide-react"
 export default function StatusModal({
   open,
   type, // "check" | "checkmate" | "draw"
+  title,
   sideInCheck,
   winner,
   onClose,
@@ -45,7 +46,7 @@ export default function StatusModal({
         return {
           variant: "modal",
           title: "Partie nulle",
-          message: "Aucun coup légal : pat ou autre condition de nul.",
+          message: title,
           showActions: true,
         }
       }

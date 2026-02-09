@@ -9,7 +9,7 @@ const Navbar = () => {
       <div className="flex items-center gap-2 text-[#f57c00]">
         <Crown size={24} fill="currentColor" />
         <span className="text-3xl font-bold tracking-tight text-white">
-          Échecs Stratégiques
+          Nexus Chess
         </span>
       </div>
     </nav>

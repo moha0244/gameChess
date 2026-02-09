@@ -8,17 +8,17 @@ const PIECES = {
   r: "♜",
   q: "♛",
   k: "♚",
-  P: "♙",
-  N: "♘",
-  B: "♗",
-  R: "♖",
-  Q: "♕",
-  K: "♔",
+  P: "♟",
+  N: "♞",
+  B: "♝",
+  R: "♜",
+  Q: "♛",
+  K: "♚",
 }
 
 const PIECE_VALUE = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 }
 
-// Compat chess.js (selon versions)
+// Compat chess.js
 const isCheck = (g) =>
   (typeof g.isCheck === "function" && g.isCheck()) ||
   (typeof g.inCheck === "function" && g.inCheck()) ||
@@ -46,11 +46,13 @@ export default function ChessGame({ playerColor, difficulty, children }) {
   const [statusModal, setStatusModal] = useState<{
     open: boolean
     type: "check" | "checkmate" | "draw"
+    title: string | null
     sideInCheck: "w" | "b" | null
     winner: "w" | "b" | null
   }>({
     open: false,
     type: "check",
+    title: null,
     sideInCheck: null,
     winner: null,
   })
@@ -84,6 +86,7 @@ export default function ChessGame({ playerColor, difficulty, children }) {
     setStatusModal({
       open: false,
       type: "check",
+      title: null,
       sideInCheck: null,
       winner: null,
     })
@@ -98,13 +101,22 @@ export default function ChessGame({ playerColor, difficulty, children }) {
         setStatusModal({
           open: true,
           type: "checkmate",
+          title: null,
           sideInCheck: sideToMove,
           winner,
         })
       } else {
+        let reason = "Match nul"
+        if (g.isStalemate()) reason = "Pat (Stalemate)"
+        else if (g.isThreefoldRepetition()) reason = "Triple répétition"
+        else if (g.isInsufficientMaterial())
+          reason = "Mat impossible (Matériel insuffisant)"
+        else if (g.isDraw()) reason = "Règle des 50 coups"
+
         setStatusModal({
           open: true,
           type: "draw",
+          title: reason,
           sideInCheck: null,
           winner: null,
         })
@@ -117,6 +129,7 @@ export default function ChessGame({ playerColor, difficulty, children }) {
       setStatusModal({
         open: true,
         type: "check",
+        title: null,
         sideInCheck: g.turn(),
         winner: null,
       })
