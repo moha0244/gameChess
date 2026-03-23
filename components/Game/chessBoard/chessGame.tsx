@@ -76,22 +76,6 @@ export default function ChessGame({ playerColor, difficulty, children }) {
     setStatusModal((prev) => ({ ...prev, open: false }))
   }, [])
 
-  const resetGame = useCallback(() => {
-    if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current)
-    aiTimeoutRef.current = null
-
-    const fresh = new Chess()
-    setGame(fresh)
-    resetSelection()
-    setStatusModal({
-      open: false,
-      type: "check",
-      title: null,
-      sideInCheck: null,
-      winner: null,
-    })
-  }, [resetSelection])
-
   const evaluate = useCallback((g) => {
     // Game over: checkmate OU nul
     if (isGameOver(g)) {
@@ -161,7 +145,7 @@ export default function ChessGame({ playerColor, difficulty, children }) {
     return score
   }
 
-  function minimax(g, depth, maximizing, aiColor) {
+  const minimax = useCallback((g, depth, maximizing, aiColor) => {
     if (depth === 0 || isGameOver(g)) {
       return { score: evaluateBoard(g, aiColor), move: null }
     }
@@ -194,9 +178,9 @@ export default function ChessGame({ playerColor, difficulty, children }) {
       }
       return { score: bestScore, move: bestMove }
     }
-  }
+  }, [])
 
-  function minimaxAB(g, depth, alpha, beta, maximizing, aiColor) {
+  const minimaxAB = useCallback((g, depth, alpha, beta, maximizing, aiColor) => {
     if (depth === 0 || isGameOver(g)) {
       return { score: evaluateBoard(g, aiColor), move: null }
     }
@@ -242,7 +226,7 @@ export default function ChessGame({ playerColor, difficulty, children }) {
       }
       return { score: bestScore, move: bestMove }
     }
-  }
+  }, [])
 
   const computedAiDelayMs = useMemo(() => {
     if (difficulty === "Facile") return 600
@@ -275,7 +259,7 @@ export default function ChessGame({ playerColor, difficulty, children }) {
       const { move } = minimaxAB(g, depth, -Infinity, Infinity, true, aiColor)
       return move ?? moves[0]
     },
-    [playerColor, difficulty]
+    [playerColor, difficulty, minimax, minimaxAB]
   )
 
   const makeAIMove = useCallback(() => {
@@ -295,6 +279,36 @@ export default function ChessGame({ playerColor, difficulty, children }) {
     setGame(g)
     evaluate(g)
   }, [playerColor, pickAIMove, evaluate])
+
+  const resetGame = useCallback(() => {
+    if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current)
+    aiTimeoutRef.current = null
+
+    const fresh = new Chess()
+    setGame(fresh)
+    resetSelection()
+    setStatusModal({
+      open: false,
+      type: "check",
+      title: null,
+      sideInCheck: null,
+      winner: null,
+    })
+
+    // Si le joueur est noir, l'IA (blanc) doit jouer en premier
+    if (playerColor === "b" && fresh.turn() === "w") {
+      aiTimeoutRef.current = setTimeout(() => {
+        const aiColor = playerColor === "w" ? "b" : "w"
+        const move = pickAIMove(fresh)
+        if (move) {
+          const g = new Chess(fresh.fen())
+          g.move(move)
+          setGame(g)
+          evaluate(g)
+        }
+      }, computedAiDelayMs)
+    }
+  }, [resetSelection, playerColor, pickAIMove, evaluate, computedAiDelayMs])
 
   const tryMove = useCallback(
     (from, to) => {
