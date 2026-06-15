@@ -10,7 +10,7 @@ Ce projet est une application de jeu d'échecs interactive qui permet aux joueur
 
 - **Jeu d'échecs complet** avec toutes les règles standard
 - **Interface moderne** avec design sombre élégant
-- **Plusieurs niveaux de difficulté** pour adapter le défi
+- **Trois niveaux d'IA** : aléatoire (Facile), alpha-beta (Moyen) et le moteur Stockfish (Difficile)
 - **Choix de couleur** (jouer avec les blancs ou les noirs)
 - **Mouvements validés** automatiquement
 - **Interface responsive** pour mobile et desktop
@@ -22,6 +22,7 @@ Ce projet est une application de jeu d'échecs interactive qui permet aux joueur
 - **Langage**: TypeScript
 - **Styling**: Tailwind CSS
 - **Logique du jeu**: chess.js
+- **IA**: moteur alpha-beta maison (JS) + Stockfish (WebAssembly/asm.js, exécuté dans un Web Worker)
 - **UI Components**: Radix UI
 - **Icons**: Lucide React
 - **Package Manager**: pnpm
@@ -102,6 +103,18 @@ La partie se termine lorsqu'un des joueurs est en :
 - **Pat** (Stalemate)
 - **Abandon** (si vous retournez au menu)
 
+## L'intelligence artificielle
+
+L'IA s'adapte au niveau de difficulté choisi :
+
+- **Facile** : un coup légal choisi au hasard.
+- **Moyen** : un moteur **alpha-beta** maison (`searchAB` dans `chessGame.tsx`), profondeur 3. Optimisé avec une exploration par `move()`/`undo()` sur une seule instance (au lieu de cloner la position) et un tri des coups (captures puis promotions d'abord) pour élaguer plus tôt.
+- **Difficile** : le moteur **Stockfish**, le plus fort au monde, dont l'évaluation repose sur un réseau de neurones (NNUE). Il est chargé en WebAssembly/asm.js dans un **Web Worker** (`public/stockfish/sf-worker.js`) pour ne pas bloquer l'interface, et piloté en protocole UCI via le hook `hooks/use-stockfish.ts`.
+
+Stockfish n'est téléchargé que lorsque le mode Difficile est actif. La build single-file utilisée ne nécessite **aucun en-tête COOP/COEP** côté serveur. Si le moteur ne peut pas être chargé (hors-ligne, CDN bloqué) ou tarde à répondre, l'application bascule automatiquement sur le moteur alpha-beta de secours, afin que l'IA joue toujours.
+
+Pour changer de version de Stockfish, modifier la constante `SF_CDN_URL` dans `public/stockfish/sf-worker.js`.
+
 ## Structure du projet
 
 ```
@@ -116,9 +129,12 @@ gameChess/
 │   │   └── chessBoard/   # Composants de l'échiquier
 │   ├── NavBar.tsx        # Barre de navigation
 │   └── ui/               # Composants UI réutilisables
+├── hooks/                 # Hooks React
+│   └── use-stockfish.ts  # Pilotage du worker Stockfish (UCI)
 ├── lib/                   # Utilitaires et logique
 ├── styles/               # Styles globaux
 └── public/               # Fichiers statiques
+    └── stockfish/        # Web Worker chargeant le moteur Stockfish
 ```
 
 ## Personnalisation
@@ -194,6 +210,7 @@ Ce projet est sous licence MIT. Voir le fichier [LICENSE.md](LICENSE.md) pour pl
 ## Remerciements
 
 - **chess.js** pour la logique du jeu d'échecs
+- **Stockfish** pour le moteur d'IA du niveau Difficile
 - **Next.js** pour le framework web
 - **Tailwind CSS** pour le styling
 - **Radix UI** pour les composants accessibles
