@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Chess } from "chess.js"
 
+import { useStockfish } from "@/hooks/use-stockfish"
+
 const PIECES = {
   p: "♟",
   n: "♞",
@@ -35,6 +37,83 @@ const isGameOver = (g) =>
   (typeof g.isGameOver === "function" && g.isGameOver()) ||
   (typeof g.game_over === "function" && g.game_over()) ||
   false
+
+// Évaluation matérielle + mobilité, du point de vue de l'IA.
+function evaluateBoard(g, aiColor) {
+  const board = g.board()
+  let score = 0
+
+  for (const row of board) {
+    for (const piece of row) {
+      if (!piece) continue
+      const val = PIECE_VALUE[piece.type] ?? 0
+      score += piece.color === aiColor ? val : -val
+    }
+  }
+
+  const mobility = g.moves().length
+  score += g.turn() === aiColor ? mobility : -mobility
+
+  return score
+}
+
+// Tri des coups : captures (MVV-LVA) puis promotions d'abord. Un bon ordre
+// fait élaguer l'alpha-beta beaucoup plus tôt -> recherche bien plus rapide.
+function moveOrderScore(m) {
+  let s = 0
+  if (m.captured) {
+    s +=
+      1000 + (PIECE_VALUE[m.captured] ?? 0) - (PIECE_VALUE[m.piece] ?? 0) / 10
+  }
+  if (m.promotion) s += 800
+  return s
+}
+
+function orderedMoves(g) {
+  const moves = g.moves({ verbose: true })
+  moves.sort((a, b) => moveOrderScore(b) - moveOrderScore(a))
+  return moves
+}
+
+// Alpha-beta unique
+function searchAB(g, depth, alpha, beta, maximizing, aiColor) {
+  if (depth === 0 || isGameOver(g)) {
+    return { score: evaluateBoard(g, aiColor), move: null }
+  }
+
+  const moves = orderedMoves(g)
+  let bestMove = null
+
+  if (maximizing) {
+    let bestScore = -Infinity
+    for (const m of moves) {
+      g.move(m)
+      const { score } = searchAB(g, depth - 1, alpha, beta, false, aiColor)
+      g.undo()
+      if (score > bestScore) {
+        bestScore = score
+        bestMove = m
+      }
+      alpha = Math.max(alpha, bestScore)
+      if (beta <= alpha) break
+    }
+    return { score: bestScore, move: bestMove }
+  } else {
+    let bestScore = Infinity
+    for (const m of moves) {
+      g.move(m)
+      const { score } = searchAB(g, depth - 1, alpha, beta, true, aiColor)
+      g.undo()
+      if (score < bestScore) {
+        bestScore = score
+        bestMove = m
+      }
+      beta = Math.min(beta, bestScore)
+      if (beta <= alpha) break
+    }
+    return { score: bestScore, move: bestMove }
+  }
+}
 
 export default function ChessGame({ playerColor, difficulty, children }) {
   const [game, setGame] = useState(() => new Chess())
@@ -75,6 +154,22 @@ export default function ChessGame({ playerColor, difficulty, children }) {
   const closeModal = useCallback(() => {
     setStatusModal((prev) => ({ ...prev, open: false }))
   }, [])
+
+  const resetGame = useCallback(() => {
+    if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current)
+    aiTimeoutRef.current = null
+
+    const fresh = new Chess()
+    setGame(fresh)
+    resetSelection()
+    setStatusModal({
+      open: false,
+      type: "check",
+      title: null,
+      sideInCheck: null,
+      winner: null,
+    })
+  }, [resetSelection])
 
   const evaluate = useCallback((g) => {
     // Game over: checkmate OU nul
@@ -127,188 +222,74 @@ export default function ChessGame({ playerColor, difficulty, children }) {
     )
   }, [])
 
-  function evaluateBoard(g, aiColor) {
-    const board = g.board()
-    let score = 0
-
-    for (const row of board) {
-      for (const piece of row) {
-        if (!piece) continue
-        const val = PIECE_VALUE[piece.type] ?? 0
-        score += piece.color === aiColor ? val : -val
-      }
-    }
-
-    const mobility = g.moves().length
-    score += g.turn() === aiColor ? mobility : -mobility
-
-    return score
-  }
-
-  const minimax = useCallback((g, depth, maximizing, aiColor) => {
-    if (depth === 0 || isGameOver(g)) {
-      return { score: evaluateBoard(g, aiColor), move: null }
-    }
-
-    const moves = g.moves()
-    let bestMove = null
-
-    if (maximizing) {
-      let bestScore = -Infinity
-      for (const m of moves) {
-        const next = new Chess(g.fen())
-        next.move(m)
-        const { score } = minimax(next, depth - 1, false, aiColor)
-        if (score > bestScore) {
-          bestScore = score
-          bestMove = m
-        }
-      }
-      return { score: bestScore, move: bestMove }
-    } else {
-      let bestScore = Infinity
-      for (const m of moves) {
-        const next = new Chess(g.fen())
-        next.move(m)
-        const { score } = minimax(next, depth - 1, true, aiColor)
-        if (score < bestScore) {
-          bestScore = score
-          bestMove = m
-        }
-      }
-      return { score: bestScore, move: bestMove }
-    }
-  }, [])
-
-  const minimaxAB = useCallback((g, depth, alpha, beta, maximizing, aiColor) => {
-    if (depth === 0 || isGameOver(g)) {
-      return { score: evaluateBoard(g, aiColor), move: null }
-    }
-
-    const moves = g.moves()
-    let bestMove = null
-
-    if (maximizing) {
-      let bestScore = -Infinity
-      for (const m of moves) {
-        const next = new Chess(g.fen())
-        next.move(m)
-        const { score } = minimaxAB(
-          next,
-          depth - 1,
-          alpha,
-          beta,
-          false,
-          aiColor
-        )
-
-        if (score > bestScore) {
-          bestScore = score
-          bestMove = m
-        }
-        alpha = Math.max(alpha, bestScore)
-        if (beta <= alpha) break
-      }
-      return { score: bestScore, move: bestMove }
-    } else {
-      let bestScore = Infinity
-      for (const m of moves) {
-        const next = new Chess(g.fen())
-        next.move(m)
-        const { score } = minimaxAB(next, depth - 1, alpha, beta, true, aiColor)
-
-        if (score < bestScore) {
-          bestScore = score
-          bestMove = m
-        }
-        beta = Math.min(beta, bestScore)
-        if (beta <= alpha) break
-      }
-      return { score: bestScore, move: bestMove }
-    }
-  }, [])
+  // Stockfish est chargé pour le mode Difficile.
+  const { getBestMove } = useStockfish(difficulty === "Difficile")
 
   const computedAiDelayMs = useMemo(() => {
     if (difficulty === "Facile") return 600
-    if (difficulty === "Moyen") return 900
-    return 1200 // Difficile
+    if (difficulty === "Moyen") return 700
+    return 400 // Difficile
   }, [difficulty])
 
-  const pickAIMove = useCallback(
-    (g) => {
-      const moves = g.moves()
+  // Moteur JS (Facile = aléatoire, Moyen = alpha-beta). Sert aussi de secours
+  // au mode Difficile si Stockfish est indisponible. Renvoie un coup "verbose".
+  const pickJsMove = useCallback(
+    (g, aiColor) => {
+      const moves = g.moves({ verbose: true })
       if (!moves.length) return null
 
-      const aiColor = playerColor === "w" ? "b" : "w"
-
-      // 1) Facile : random
       if (difficulty === "Facile") {
         return moves[Math.floor(Math.random() * moves.length)]
       }
 
-      // Réglages profondeur (à ajuster selon perf)
-      const depth = difficulty === "Moyen" ? 2 : 3
-
-      // 2) Moyen : minimax
-      if (difficulty === "Moyen") {
-        const { move } = minimax(g, depth, true, aiColor)
-        return move ?? moves[0]
-      }
-
-      // 3) Difficile : minimax alpha-beta
-      const { move } = minimaxAB(g, depth, -Infinity, Infinity, true, aiColor)
+      // Moyen (et secours Difficile) : alpha-beta optimisé.
+      const { move } = searchAB(g, 3, -Infinity, Infinity, true, aiColor)
       return move ?? moves[0]
     },
-    [playerColor, difficulty, minimax, minimaxAB]
+    [difficulty]
   )
 
-  const makeAIMove = useCallback(() => {
+  const makeAIMove = useCallback(async () => {
     const current = gameRef.current
     const aiColor = playerColor === "w" ? "b" : "w"
     if (current.turn() !== aiColor) return
     if (isGameOver(current)) return
 
-    const g = new Chess(current.fen())
-    const move = pickAIMove(g)
-    if (!move) {
+    const fen = current.fen()
+    const g = new Chess(fen)
+    let applied: any = null
+
+    if (difficulty === "Difficile") {
+      const uci = await getBestMove(fen, { skillLevel: 20, movetime: 1200 })
+
+      // Garde-fou : la partie a-t-elle changé pendant la réflexion (reset…) ?
+      if (gameRef.current.fen() !== fen) return
+
+      if (uci) {
+        applied = g.move({
+          from: uci.slice(0, 2),
+          to: uci.slice(2, 4),
+          promotion: uci.length > 4 ? uci[4] : undefined,
+        })
+      }
+      // Secours moteur JS si Stockfish indisponible (CDN bloqué, hors-ligne).
+      if (!applied) {
+        const m = pickJsMove(g, aiColor)
+        if (m) applied = g.move(m)
+      }
+    } else {
+      const m = pickJsMove(g, aiColor)
+      if (m) applied = g.move(m)
+    }
+
+    if (!applied) {
       evaluate(g)
       return
     }
 
-    g.move(move)
     setGame(g)
     evaluate(g)
-  }, [playerColor, pickAIMove, evaluate])
-
-  const resetGame = useCallback(() => {
-    if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current)
-    aiTimeoutRef.current = null
-
-    const fresh = new Chess()
-    setGame(fresh)
-    resetSelection()
-    setStatusModal({
-      open: false,
-      type: "check",
-      title: null,
-      sideInCheck: null,
-      winner: null,
-    })
-
-    // Si le joueur est noir, l'IA (blanc) doit jouer en premier
-    if (playerColor === "b" && fresh.turn() === "w") {
-      aiTimeoutRef.current = setTimeout(() => {
-        const aiColor = playerColor === "w" ? "b" : "w"
-        const move = pickAIMove(fresh)
-        if (move) {
-          const g = new Chess(fresh.fen())
-          g.move(move)
-          setGame(g)
-          evaluate(g)
-        }
-      }, computedAiDelayMs)
-    }
-  }, [resetSelection, playerColor, pickAIMove, evaluate, computedAiDelayMs])
+  }, [playerColor, difficulty, getBestMove, pickJsMove, evaluate])
 
   const tryMove = useCallback(
     (from, to) => {

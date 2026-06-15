@@ -8,7 +8,7 @@ export default function StepGuide() {
     {
       id: 2,
       title: "Affrontez",
-      desc: "Jouez contre notre IA établi à l'aide d'une methode minimax ",
+      desc: "Jouez contre notre IA : recherche alpha-beta aux premiers niveaux, et le moteur Stockfish en difficile.",
     },
     { id: 3, title: "Progressez", desc: "Analysez vos coups et gagnez." },
   ]
